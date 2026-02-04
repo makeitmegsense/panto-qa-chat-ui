@@ -6,6 +6,7 @@ import {
   ChevronDown,
   Brain,
   Sparkles,
+  XCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +14,7 @@ interface Step {
   step: string;
   description: string;
   icon: "search" | "click" | "view" | "action";
+  shouldFail?: boolean;
 }
 
 export interface ExecutionWorkflow {
@@ -21,148 +23,157 @@ export interface ExecutionWorkflow {
   steps: Step[];
 }
 
-interface Props {
+const AutonomousWorkflow = ({
+  workflows,
+}: {
   workflows: ExecutionWorkflow[];
-}
-
-const AutonomousWorkflow = ({ workflows }: Props) => {
+}) => {
   const [activeWorkflowIndex, setActiveWorkflowIndex] = useState(0);
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
-
-  const toggleExpand = (id: string) => {
-    setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
-  };
+  const [failedWorkflowIndex, setFailedWorkflowIndex] =
+    useState<number | null>(null);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>(
+    {}
+  );
 
   return (
     <div className="relative space-y-8">
-      {/* Vertical rail */}
       <div className="absolute left-4 top-0 bottom-0 w-px bg-[#019D91]/20" />
 
-      {/* Header */}
-      <div className="ml-10">
-        <p className="text-sm font-semibold text-slate-900">
-          Autonomous QA execution pipeline
-        </p>
-        <p className="text-xs text-slate-500">
-          Each phase is planned, executed, and validated by AI
-        </p>
-      </div>
+      {workflows.map((wf, index) => {
+        const isFailed = index === failedWorkflowIndex;
 
-      {workflows.map((workflow, index) => {
-        const isActive = index === activeWorkflowIndex;
-        const isCompleted = index < activeWorkflowIndex;
-        const isExpanded = expanded[workflow.id];
+        // 🔑 CRITICAL FIX
+       const isActive =
+  index === activeWorkflowIndex &&
+  (failedWorkflowIndex === null ||
+    failedWorkflowIndex === index);
+
+        const isCompleted =
+          index < activeWorkflowIndex &&
+          failedWorkflowIndex === null;
+
+        const isExpanded = expanded[wf.id] || isFailed;
 
         return (
-          <div
-            key={workflow.id}
-            className={cn(
-              "relative ml-10 transition-all duration-500 ease-out",
-              isCompleted && "opacity-90"
-            )}
-          >
-            {/* Phase node */}
+          <div key={wf.id} className="ml-10 relative">
+            {/* Node */}
             <div className="absolute -left-10 top-4">
               <div
                 className={cn(
-                  "w-7 h-7 rounded-full flex items-center justify-center transition-all",
+                  "w-7 h-7 rounded-full flex items-center justify-center",
                   isCompleted && "bg-[#019D91] text-white",
                   isActive &&
+                    !isFailed &&
                     "bg-[#019D91] text-white animate-pulse",
+                  isFailed && "bg-red-500 text-white",
                   !isActive &&
                     !isCompleted &&
+                    !isFailed &&
                     "bg-slate-200"
                 )}
               >
                 {isCompleted && <Check className="w-4 h-4" />}
-                {isActive && (
+                {isActive && !isFailed && (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 )}
+                {isFailed && <XCircle className="w-4 h-4" />}
               </div>
             </div>
 
-            {/* Phase card */}
-            <div className="rounded-2xl bg-white/95 backdrop-blur border border-slate-200 shadow-[0_20px_60px_rgba(1,157,145,0.12)] p-5">
-              {/* Phase header */}
+            {/* Card */}
+            <div
+              className={cn(
+                "rounded-2xl border p-5 shadow",
+                isFailed
+                  ? "border-red-200 bg-red-50/40"
+                  : "border-slate-200 bg-white"
+              )}
+            >
+              {/* Header */}
               <button
-                onClick={() => toggleExpand(workflow.id)}
-                className="w-full flex items-start justify-between gap-4 text-left"
+                className="w-full flex justify-between text-left"
+                onClick={() =>
+                  setExpanded((p) => ({
+                    ...p,
+                    [wf.id]: !p[wf.id],
+                  }))
+                }
               >
                 <div>
-                  <p className="text-sm font-semibold text-slate-900">
-                    {workflow.title}
+                  <p className="font-semibold text-sm">
+                    {wf.title}
                   </p>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    {isCompleted
-                      ? "Phase completed successfully"
+                  <p className="text-xs text-slate-500">
+                    {isFailed
+                      ? "Phase failed"
+                      : isCompleted
+                      ? "Phase completed"
                       : isActive
-                      ? "AI is executing this phase"
-                      : "Queued for execution"}
+                      ? "Executing"
+                      : "Queued"}
                   </p>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  {/* AI signals */}
-                  {isActive && (
-                    <span className="flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full bg-[#F3FBFA] text-[#019D91] border border-[#019D91]/30">
-                      <Brain className="w-3.5 h-3.5" />
-                      High confidence
-                    </span>
-                  )}
-
+                <div className="flex items-center gap-2">
                   {isCompleted && (
-                    <span className="flex items-center gap-1.5 text-xs text-[#019D91]">
+                    <span className="text-xs text-[#019D91] flex items-center gap-1">
                       <Sparkles className="w-3.5 h-3.5" />
                       Verified
                     </span>
                   )}
-
-                  {/* Expand chevron */}
+                  {isFailed && (
+                    <span className="text-xs text-red-600 flex items-center gap-1">
+                      <Brain className="w-3.5 h-3.5" />
+                      Failed
+                    </span>
+                  )}
                   <ChevronDown
                     className={cn(
-                      "w-4 h-4 text-slate-400 transition-transform",
+                      "w-4 h-4 transition-transform",
                       isExpanded && "rotate-180"
                     )}
                   />
                 </div>
               </button>
 
-              {/* Divider */}
-              <div className="my-4 h-px bg-gradient-to-r from-transparent via-[#019D91]/20 to-transparent" />
+              <div className="my-4 h-px bg-[#019D91]/20" />
 
-              {/* Active execution */}
+              {/* 🔥 SINGLE ExecutionBlock ONLY */}
               {isActive && (
-                <div className="animate-in fade-in slide-in-from-top-3 duration-400">
-                  <ExecutionBlock
-                    title={workflow.title}
-                    steps={workflow.steps}
-                    mode="autonomous"
-                    onComplete={() =>
-                      setActiveWorkflowIndex((prev) => prev + 1)
-                    }
-                  />
-                </div>
+                <ExecutionBlock
+                  title={wf.title}
+                  steps={wf.steps}
+                  mode="autonomous"
+                  onComplete={() =>
+                    setActiveWorkflowIndex((i) => i + 1)
+                  }
+                  onFail={() => {
+                    setFailedWorkflowIndex(index);
+                    setExpanded((p) => ({
+                      ...p,
+                      [wf.id]: true,
+                    }));
+                  }}
+                />
               )}
 
-              {/* Expandable step summary (after / before execution) */}
+              {/* Step summary */}
               {!isActive && isExpanded && (
-                <div className="mt-4 space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
-                  <p className="text-xs font-medium text-slate-700">
-                    Steps executed in this phase
-                  </p>
-
-                  <ul className="space-y-2">
-                    {workflow.steps.map((step, i) => (
-                      <li
-                        key={i}
-                        className="flex items-start gap-3 text-sm text-slate-600"
-                      >
-                        <span className="mt-1 w-1.5 h-1.5 rounded-full bg-[#019D91]" />
-                        <span>{step.step}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                <ul className="mt-4 space-y-2 text-sm text-slate-600">
+                  {wf.steps.map((s, i) => (
+                    <li key={i} className="flex gap-2">
+                      <span
+                        className={cn(
+                          "w-1.5 h-1.5 rounded-full mt-2",
+                          isFailed
+                            ? "bg-red-500"
+                            : "bg-[#019D91]"
+                        )}
+                      />
+                      {s.step}
+                    </li>
+                  ))}
+                </ul>
               )}
             </div>
           </div>

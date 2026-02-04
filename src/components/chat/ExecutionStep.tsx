@@ -6,6 +6,7 @@ import {
   Search,
   Eye,
   Zap,
+  XCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -42,7 +43,9 @@ const ExecutionStep = ({
         status === "executing" &&
           "bg-[#F3FBFA] ring-1 ring-[#019D91]/30",
         status === "completed" && "opacity-70",
-        status === "pending" && "opacity-80"
+        status === "pending" && "opacity-80",
+        status === "error" &&
+          "bg-red-50 ring-1 ring-red-200"
       )}
       style={{
         animation: `step-enter 0.3s ease-out ${index * 70}ms forwards`,
@@ -77,7 +80,7 @@ const ExecutionStep = ({
           )}
 
           {status === "error" && (
-            <span className="text-xs font-bold">!</span>
+            <XCircle className="w-3.5 h-3.5" />
           )}
         </div>
       </div>
@@ -88,7 +91,9 @@ const ExecutionStep = ({
           <Icon
             className={cn(
               "w-4 h-4",
-              status === "executing"
+              status === "error"
+                ? "text-red-500"
+                : status === "executing"
                 ? "text-[#019D91]"
                 : "text-slate-400"
             )}
@@ -99,6 +104,8 @@ const ExecutionStep = ({
               "text-sm",
               status === "executing"
                 ? "font-medium text-slate-900"
+                : status === "error"
+                ? "font-medium text-red-700"
                 : "text-slate-600"
             )}
           >
@@ -109,6 +116,15 @@ const ExecutionStep = ({
         <p className="mt-0.5 text-sm text-slate-500">
           {description}
         </p>
+
+        {/* Failure explanation */}
+        {status === "error" && (
+          <div className="mt-2 rounded-md bg-red-100 border border-red-200 px-3 py-2 text-xs text-red-700">
+            <strong>Failure detected:</strong> The expected action could not be
+            completed. The element was not in an actionable state (e.g. disabled,
+            hidden, or blocked by validation).
+          </div>
+        )}
       </div>
 
       {/* Executing emphasis */}

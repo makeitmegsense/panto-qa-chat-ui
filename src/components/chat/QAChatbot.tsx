@@ -21,7 +21,10 @@ const QAChatbot = () => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
 
-  const handleSend = (content: string, mode: "guided" | "autonomous") => {
+  const handleSend = (
+    content: string,
+    mode: "guided" | "autonomous"
+  ) => {
     const userMessage: Message = {
       id: Date.now().toString(),
       role: "user",
@@ -34,7 +37,13 @@ const QAChatbot = () => {
     setTimeout(() => {
       setIsTyping(false);
 
-      const steps = [
+      /* ===================== INTENT DETECTION ===================== */
+      const isFailureScenario = content
+        .toLowerCase()
+        .includes("orange");
+
+      /* ===================== STEP DEFINITIONS ===================== */
+      const successSteps = [
         {
           step: "Locate product",
           description: "Finding the product on the page",
@@ -57,41 +66,81 @@ const QAChatbot = () => {
         },
       ];
 
+      const failureSteps = [
+        {
+          step: "Locate product",
+          description:
+            "Product ‘Orange’ found on category page",
+          icon: "search",
+        },
+        {
+          step: "Find CTA",
+          description:
+            "Add to Cart button is disabled",
+          icon: "view",
+          shouldFail: true, // 🔴 critical
+        },
+      ];
+
+      const steps = isFailureScenario
+        ? failureSteps
+        : successSteps;
+
+      /* ===================== EXECUTION PAYLOAD ===================== */
       const execution =
         mode === "autonomous"
           ? {
               mode: "autonomous" as const,
-              workflows: [
-                {
-                  id: "prep",
-                  title: "Preparation",
-                  steps: steps.slice(0, 2),
-                },
-                {
-                  id: "action",
-                  title: "Action",
-                  steps: steps.slice(2, 3),
-                },
-                {
-                  id: "validation",
-                  title: "Validation",
-                  steps: steps.slice(3),
-                },
-              ],
+              workflows: isFailureScenario
+                ? [
+                    {
+                      id: "prep",
+                      title: "Preparation",
+                      steps: steps.slice(0, 1),
+                    },
+                    {
+                      id: "action",
+                      title: "Action",
+                      steps: steps.slice(1), // fails here
+                    },
+                  ]
+                : [
+                    {
+                      id: "prep",
+                      title: "Preparation",
+                      steps: steps.slice(0, 2),
+                    },
+                    {
+                      id: "action",
+                      title: "Action",
+                      steps: steps.slice(2, 3),
+                    },
+                    {
+                      id: "validation",
+                      title: "Validation",
+                      steps: steps.slice(3),
+                    },
+                  ],
             }
           : {
               mode: "guided" as const,
-              title: "Add item to cart",
+              title: isFailureScenario
+                ? "Add orange to cart"
+                : "Add item to cart",
               steps,
             };
 
+      /* ===================== ASSISTANT MESSAGE ===================== */
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content:
-          mode === "autonomous"
-            ? "Here’s the execution plan. I’ll run this and surface results at each stage."
-            : "We’ll go step by step and validate as we go.",
+        content: isFailureScenario
+          ? mode === "autonomous"
+            ? "I’ll attempt this autonomously. I’ll stop if any validation fails and explain why."
+            : "Let’s try this together. I’ll stop if something doesn’t look right."
+          : mode === "autonomous"
+          ? "Here’s the execution plan. I’ll run this and surface results at each stage."
+          : "We’ll go step by step and validate as we go.",
         execution,
       };
 
@@ -101,7 +150,7 @@ const QAChatbot = () => {
 
   return (
     <div className="relative min-h-screen flex justify-center px-4 bg-gradient-to-b from-[#EAF7F5] via-[#E6F4F2] to-[#DFF1EE]">
-      {/* ambient glow */}
+      {/* Ambient glow */}
       <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top,_rgba(1,157,145,0.15),_transparent_60%)]" />
 
       <div className="w-full max-w-3xl my-10 bg-white/95 backdrop-blur rounded-3xl shadow-[0_20px_60px_rgba(1,157,145,0.15)] flex flex-col overflow-hidden">
@@ -111,7 +160,6 @@ const QAChatbot = () => {
             <div className="w-10 h-10 rounded-xl bg-[#F3FBFA] flex items-center justify-center">
               <Bot className="w-5 h-5 text-[#019D91]" />
             </div>
-
             <div>
               <p className="text-sm font-semibold text-slate-900">
                 Panto QA Assistant
