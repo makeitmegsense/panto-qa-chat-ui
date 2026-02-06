@@ -17,9 +17,9 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/execute" element={<ExecuteTestFlowPage />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
-          <Route path="/execute" element={<ExecuteTestFlowPage />} />
         </Routes>
       </BrowserRouter>
     </TooltipProvider>
