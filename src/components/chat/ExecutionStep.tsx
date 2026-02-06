@@ -39,7 +39,7 @@ const ExecutionStep = ({
   return (
     <div
       className={cn(
-        "relative flex gap-4 py-2 px-3 rounded-lg transition-colors",
+        "relative flex gap-4 py-2 px-3 rounded-sm transition-colors",
         status === "executing" &&
           "bg-[#F3FBFA] ring-1 ring-[#019D91]/30",
         status === "completed" && "opacity-70",
@@ -58,7 +58,7 @@ const ExecutionStep = ({
       <div className="relative z-10 flex-shrink-0 mt-1">
         <div
           className={cn(
-            "w-5 h-5 rounded-full flex items-center justify-center",
+            "w-5 h-5 rounded-sm flex items-center justify-center",
             status === "pending" && "bg-slate-200",
             status === "executing" &&
               "bg-[#019D91] text-white animate-pulse",
@@ -119,7 +119,7 @@ const ExecutionStep = ({
 
         {/* Failure explanation */}
         {status === "error" && (
-          <div className="mt-2 rounded-md bg-red-100 border border-red-200 px-3 py-2 text-xs text-red-700">
+          <div className="mt-2 rounded-sm bg-red-100 border border-red-200 px-3 py-2 text-xs text-red-700">
             <strong>Failure detected:</strong> The expected action could not be
             completed. The element was not in an actionable state (e.g. disabled,
             hidden, or blocked by validation).

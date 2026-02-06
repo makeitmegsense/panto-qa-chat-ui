@@ -26,7 +26,7 @@ const ChatInput = ({ onSend, disabled }: ChatInputProps) => {
         <button
           onClick={() => setMode("guided")}
           className={cn(
-            "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all",
+            "flex items-center gap-2 px-3 py-1.5 rounded-sm text-sm font-medium transition-all",
             mode === "guided"
               ? "bg-primary/20 text-primary border border-primary/30"
               : "bg-muted/50 text-muted-foreground hover:bg-muted"
@@ -38,7 +38,7 @@ const ChatInput = ({ onSend, disabled }: ChatInputProps) => {
         <button
           onClick={() => setMode("autonomous")}
           className={cn(
-            "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all",
+            "flex items-center gap-2 px-3 py-1.5 rounded-sm text-sm font-medium transition-all",
             mode === "autonomous"
               ? "bg-accent/20 text-accent border border-accent/30"
               : "bg-muted/50 text-muted-foreground hover:bg-muted"
@@ -62,7 +62,7 @@ const ChatInput = ({ onSend, disabled }: ChatInputProps) => {
           }
           disabled={disabled}
           className={cn(
-            "w-full px-4 py-3 pr-12 rounded-xl",
+            "w-full px-4 py-3 pr-12 rounded-sm",
             "bg-muted/50 border border-border",
             "text-foreground placeholder:text-muted-foreground",
             "focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50",
@@ -75,7 +75,7 @@ const ChatInput = ({ onSend, disabled }: ChatInputProps) => {
           disabled={!input.trim() || disabled}
           className={cn(
             "absolute right-2 top-1/2 -translate-y-1/2",
-            "w-8 h-8 rounded-lg flex items-center justify-center",
+            "w-8 h-8 rounded-sm flex items-center justify-center",
             "bg-primary text-primary-foreground",
             "hover:bg-primary/90 transition-colors",
             "disabled:opacity-50 disabled:cursor-not-allowed"

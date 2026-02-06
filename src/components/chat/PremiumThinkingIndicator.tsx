@@ -1,106 +1,76 @@
-import { useEffect, useState } from "react";
-import { Brain, Sparkles, Search, Zap } from "lucide-react";
-import { cn } from "@/lib/utils";
-
-/* ================= STAGES ================= */
-
-const STAGES = [
-  { label: "Understanding your request", icon: Brain },
-  { label: "Analyzing screen context", icon: Search },
-  { label: "Designing execution plan", icon: Sparkles },
-  { label: "Preparing automation steps", icon: Zap },
-];
-
-/* ================= COMPONENT ================= */
+import { useEffect } from "react";
+import { Search } from "lucide-react";
 
 interface Props {
+  /** Called when the thinking animation duration completes */
   onComplete?: () => void;
-  durationPerStage?: number;
+  /** Total visible duration of the indicator (ms) */
+  duration?: number;
 }
 
-const PremiumThinkingIndicator = ({
+/**
+ * Premium, calm "Processing" thinking indicator used in QA chatbot.
+ *
+ * Design goals:
+ * - Single clear state → "Processing"
+ * - Smooth, slow micro‑animation (no jittery motion)
+ * - Soft glow + animated scanning lines
+ * - Minimal cognitive load
+ */
+export default function PremiumThinkingIndicator({
   onComplete,
-  durationPerStage = 2500,
-}: Props) => {
-  const [stageIndex, setStageIndex] = useState(0);
-  const [finished, setFinished] = useState(false);
-
-  const currentStage = STAGES[stageIndex];
-  const Icon = currentStage.icon;
-
-  /* ===== Stage progression (logic unchanged) ===== */
+  duration = 1800, // visible but not slow
+}: Props) {
+  /** Notify parent once animation time finishes */
   useEffect(() => {
-    if (stageIndex >= STAGES.length) {
-      setFinished(true);
-      onComplete?.();
-      return;
-    }
-
-    const t = setTimeout(() => {
-      setStageIndex((i) => i + 1);
-    }, durationPerStage);
-
+    const t = setTimeout(() => onComplete?.(), duration);
     return () => clearTimeout(t);
-  }, [stageIndex, durationPerStage, onComplete]);
-
-  if (finished) return null;
+  }, [duration, onComplete]);
 
   return (
-    <div className="relative flex items-center gap-4 px-5 py-4 rounded-2xl
-      bg-white/70 backdrop-blur-xl
-      border border-[#019D91]/15
-      shadow-[0_8px_30px_rgba(1,157,145,0.12)]
-      animate-fade-in"
-    >
-      {/* ===== Energy Core ===== */}
+    <div className="flex items-center gap-4 px-5 py-4 rounded-sm bg-white/80 backdrop-blur border border-[#019D91]/10 shadow-[0_10px_30px_rgba(1,157,145,0.12)]">
+      {/* ===== AI Orb ===== */}
       <div className="relative w-11 h-11 flex-shrink-0">
-        {/* soft glow */}
-        <div className="absolute inset-0 rounded-full
-          bg-gradient-to-br from-[#019D91] to-[#019D91]/40
-          blur-md opacity-70 animate-breathe"
-        />
+        {/* soft breathing glow */}
+        <div className="absolute inset-0 rounded-full bg-gradient-to-br from-[#019D91] to-[#019D91]/60 blur-[4px] opacity-80 animate-[pulse_2.4s_ease-in-out_infinite]" />
 
-        {/* core */}
-        <div className="absolute inset-0 rounded-full
-          bg-gradient-to-br from-[#019D91] to-[#0ea5a0]
-          flex items-center justify-center
-          shadow-inner"
-        >
-          <Icon className="w-5 h-5 text-white animate-fade-in" />
+        {/* center icon */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <Search className="w-5 h-5 text-white" />
         </div>
 
-        {/* orbit ring */}
-        <div className="absolute inset-[-5px] rounded-full
-          border border-[#019D91]/30
-          animate-orbit-slow"
-        />
+        {/* subtle orbit ring */}
+        <div className="absolute inset-[-6px] rounded-full border border-[#019D91]/25 animate-[spin_6s_linear_infinite]" />
       </div>
 
-      {/* ===== Text + subtle activity bars ===== */}
-      <div className="flex flex-col gap-2 flex-1 min-w-0">
-        <span
-          key={stageIndex}
-          className="text-sm font-medium text-slate-800
-            animate-fade-in-up truncate"
-        >
-          {currentStage.label}
+      {/* ===== Text + animated scan lines ===== */}
+      <div className="flex flex-col gap-2">
+        <span className="text-sm font-medium text-slate-800">
+          Processing
         </span>
 
-        {/* premium pulse bars */}
-        <div className="flex items-center gap-1">
+        {/* scanning lines */}
+        <div className="flex items-end gap-[4px] h-4">
           {[0, 1, 2, 3, 4].map((i) => (
             <div
               key={i}
-              className="w-[3px] h-4 rounded-full
-                bg-gradient-to-t from-[#019D91]/40 to-[#019D91]
-                animate-wave-soft"
-              style={{ animationDelay: `${i * 0.12}s` }}
+              className="w-[3px] rounded-full bg-[#019D91]/70"
+              style={{
+                height: "100%",
+                animation: `scan 1.2s ease-in-out ${i * 0.12}s infinite`,
+              }}
             />
           ))}
         </div>
       </div>
+
+      {/* ===== Keyframes (scoped) ===== */}
+      <style>{`
+        @keyframes scan {
+          0%, 100% { transform: scaleY(0.4); opacity: 0.4; }
+          50% { transform: scaleY(1); opacity: 1; }
+        }
+      `}</style>
     </div>
   );
-};
-
-export default PremiumThinkingIndicator;
+}
