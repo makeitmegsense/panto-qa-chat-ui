@@ -1,12 +1,12 @@
 import QAChatbot from "@/components/chat/QAChatbot";
-import ExecuteTestFlowPage from "src/components/chat/ExecuteTestFlowPage.tsx"
+import ExecuteTestFlowPage from "@/components/chat/ExecuteTestFlowPage";
 
 
 
 const Index = () => {
   return (
     <div className="min-h-screen gradient-dark">
-      <QAChatbot />
+      <ExecuteTestFlowPage />
     </div>
   );
 };
