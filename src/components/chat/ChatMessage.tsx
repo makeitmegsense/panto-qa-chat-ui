@@ -72,7 +72,7 @@ const ChatMessage = ({ message }: ChatMessageProps) => {
         {/* ================= TEXT BUBBLE ================= */}
         <div
           className={cn(
-            "px-4 py-2.5 text-sm rounded-2xl leading-relaxed",
+            "px-4 py-2.5 text-sm rounded-sm leading-relaxed",
             isUser
               ? "bg-[#019D91] text-white rounded-tr-sm"
               : "bg-white text-slate-900 border border-slate-200 rounded-tl-sm shadow-sm"
@@ -85,7 +85,7 @@ const ChatMessage = ({ message }: ChatMessageProps) => {
         {execution && !isUser && (
           <div className="pl-2 pr-1">
             {/* ===== Glass wrapper (Panto homepage style) ===== */}
-            <div className="w-full rounded-2xl border border-slate-200/60 bg-white/70 backdrop-blur-xl shadow-[0_20px_60px_rgba(2,132,199,0.08)] p-6 transition-all">
+            <div className="w-full rounded-sm border border-slate-200/60 bg-white/70 backdrop-blur-xl shadow-[0_20px_60px_rgba(2,132,199,0.08)] p-6 transition-all">
               
               {/* ===== Header ===== */}
               <div className="mb-5">
@@ -105,7 +105,7 @@ const ChatMessage = ({ message }: ChatMessageProps) => {
               </div>
 
               {/* ===== Mint execution surface ===== */}
-              <div className="rounded-xl border border-[#019D91]/10 p-4">
+              <div className="rounded-sm border border-[#019D91]/10 p-4">
                 {execution.mode === "autonomous" && execution.workflows ? (
                   <AutonomousWorkflow workflows={execution.workflows} />
                 ) : (

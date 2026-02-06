@@ -37,7 +37,7 @@ const StepRow = ({
   return (
     <div
       className={cn(
-        "relative flex gap-4 py-4 px-3 rounded-lg transition-all",
+        "relative flex gap-4 py-4 px-3 rounded-sm transition-all",
         status === "executing" &&
           "bg-emerald-50/60 ring-1 ring-emerald-200",
         status === "completed" && "opacity-80"
@@ -50,7 +50,7 @@ const StepRow = ({
       <div className="relative z-10 flex flex-col items-center">
         <div
           className={cn(
-            "w-6 h-6 rounded-full flex items-center justify-center",
+            "w-6 h-6 rounded-sm flex items-center justify-center",
             status === "pending" && "bg-slate-200",
             status === "executing" &&
               "bg-emerald-600 text-white animate-pulse",

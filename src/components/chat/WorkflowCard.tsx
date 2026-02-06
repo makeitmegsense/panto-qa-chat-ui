@@ -62,7 +62,7 @@ const WorkflowCard = ({ title, steps, mode }: WorkflowCardProps) => {
   }, [phase, currentStep, steps.length]);
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-6 shadow-sm">
+    <div className="rounded-sm border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-6 shadow-sm">
       {/* Header */}
       <div className="mb-5">
         <p className="text-sm font-semibold text-slate-900">

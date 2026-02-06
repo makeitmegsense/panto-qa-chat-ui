@@ -12,7 +12,7 @@ const ExecutionLogRow = ({
   action,
 }: ExecutionLogRowProps) => {
   return (
-    <div className="flex items-start gap-3 text-xs py-2 px-2 rounded-md text-slate-600">
+    <div className="flex items-start gap-3 text-xs py-2 px-2 rounded-sm text-slate-600">
       {/* Icon */}
       <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
 
