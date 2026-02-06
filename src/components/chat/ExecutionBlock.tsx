@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import ExecutionStep, { StepStatus } from "./ExecutionStep";
+import ExecutionLogRow from "./ExecutionLogRow";
 import {
   Check,
   Loader2,
-  Brain,
-  Compass,
   XCircle,
+  Target,
+  Zap,
+  ChevronDown,
   RotateCcw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -25,10 +27,75 @@ interface ExecutionBlockProps {
   onFail?: () => void;
 }
 
-const MAX_RETRIES = {
-  guided: 1,
-  autonomous: 2,
+type LogEntry = {
+  step: number;
+  goal: string;
+  action: string;
 };
+
+/* ================= EXECUTION PLAN ================= */
+
+const PLAN_STEPS = [
+  "Fetching image and XML",
+  "Searching required element",
+  "Executing action on device",
+  "Validating action",
+];
+
+function generateLogsForStep(stepIndex: number): LogEntry[] {
+  switch (stepIndex) {
+    case 0:
+      return [
+        {
+          step: 1,
+          goal: "Open the Walmart application.",
+          action:
+            "Opening the Walmart app using the assumed package name 'com.application.walmart'.",
+        },
+        {
+          step: 2,
+          goal:
+            "Wait for the Walmart app to fully load and display its main interface, then take a screenshot.",
+          action:
+            "Sleeping for 5 seconds to allow the Walmart app to load, then taking a new screenshot.",
+        },
+      ];
+
+    case 1:
+      return [
+        {
+          step: 3,
+          goal: "Search for the product 'Orange' using the search bar.",
+          action:
+            "Typing 'Orange' into the search field and submitting the query.",
+        },
+      ];
+
+    case 2:
+      return [
+        {
+          step: 4,
+          goal: "Attempt to tap the 'Add to Cart' button.",
+          action:
+            "Detected that the 'Add to Cart' button is disabled and cannot be interacted with.",
+        },
+      ];
+
+    case 3:
+      return [
+        {
+          step: 5,
+          goal: "Validate whether the item was successfully added.",
+          action: "Validation failed because the action could not be completed.",
+        },
+      ];
+
+    default:
+      return [];
+  }
+}
+
+/* ================= COMPONENT ================= */
 
 const ExecutionBlock = ({
   title,
@@ -37,208 +104,242 @@ const ExecutionBlock = ({
   onComplete,
   onFail,
 }: ExecutionBlockProps) => {
-  const [currentStep, setCurrentStep] = useState(
-    mode === "autonomous" ? -1 : 0
-  );
+  const [currentStep, setCurrentStep] = useState(0);
   const [stepStatuses, setStepStatuses] = useState<StepStatus[]>([]);
-  const [phase, setPhase] = useState<
-    "planning" | "executing" | "complete" | "failed"
-  >(mode === "autonomous" ? "planning" : "executing");
+  const [phase, setPhase] = useState<"executing" | "complete" | "failed">(
+    "executing"
+  );
+  const [allLogs, setAllLogs] = useState<LogEntry[]>([]);
 
+  /* 🆕 retry state */
   const [retryCount, setRetryCount] = useState(0);
-  const [retryKey, setRetryKey] = useState(0);
+  const MAX_AUTO_RETRY = mode === "autonomous" ? 3 : 1;
+
+  /* collapse + timing */
+  const [collapsed, setCollapsed] = useState(false);
+  const [startTime, setStartTime] = useState(Date.now());
 
   const hasError = stepStatuses.includes("error");
 
-  /* ===================== RESET ===================== */
-  useEffect(() => {
+  /* ===== Reset / Manual Retry ===== */
+  const resetExecution = () => {
     setStepStatuses(steps.map(() => "pending"));
+    setAllLogs([]);
+    setCurrentStep(0);
+    setPhase("executing");
     setRetryCount(0);
+    setCollapsed(false);
+    setStartTime(Date.now());
+  };
 
-    if (mode === "guided") {
-      setCurrentStep(0);
-      setPhase("executing");
-    } else {
-      setCurrentStep(steps.length ? 0 : -1);
-      setPhase(steps.length ? "executing" : "planning");
-    }
-  }, [steps, mode, retryKey]);
+  useEffect(() => {
+    resetExecution();
+  }, [steps, mode]);
 
-  /* ===================== STEP EXECUTION ===================== */
+  /* ===== Step execution ===== */
   useEffect(() => {
     if (phase !== "executing") return;
-    if (currentStep < 0 || currentStep >= steps.length) return;
-    if (hasError) return;
+    if (currentStep >= PLAN_STEPS.length) return;
 
-    setStepStatuses((prev) => {
-      const next = [...prev];
+    setStepStatuses((s) => {
+      const next = [...s];
       next[currentStep] = "executing";
       return next;
     });
 
     const timer = setTimeout(() => {
-      const step = steps[currentStep];
-      const maxRetries = MAX_RETRIES[mode];
+      const shouldFail = steps[currentStep]?.shouldFail;
 
-      if (step.shouldFail) {
-        if (retryCount < maxRetries) {
+      /* ❌ FAILURE */
+      if (shouldFail) {
+        if (retryCount < MAX_AUTO_RETRY) {
           setRetryCount((r) => r + 1);
-          setStepStatuses((prev) => {
-            const next = [...prev];
-            next[currentStep] = "pending";
-            return next;
-          });
+
+          setAllLogs((prev) => [
+            ...prev,
+            {
+              step: prev.length + 1,
+              goal: `Retrying step ${currentStep + 1}`,
+              action: `Automatic retry attempt ${retryCount + 1}`,
+            },
+          ]);
+
           return;
         }
 
-        setStepStatuses((prev) => {
-          const next = [...prev];
+        setStepStatuses((s) => {
+          const next = [...s];
           next[currentStep] = "error";
           return next;
         });
+
+        setPhase("failed");
+        onFail?.();
         return;
       }
 
-      setStepStatuses((prev) => {
-        const next = [...prev];
+      /* ✅ SUCCESS */
+      setStepStatuses((s) => {
+        const next = [...s];
         next[currentStep] = "completed";
         return next;
       });
 
-      setRetryCount(0);
+      setAllLogs((prev) => [...prev, ...generateLogsForStep(currentStep)]);
 
-      if (currentStep < steps.length - 1) {
+      if (currentStep < PLAN_STEPS.length - 1) {
         setCurrentStep((i) => i + 1);
       } else {
         setPhase("complete");
-        if (mode === "autonomous") onComplete?.();
+        onComplete?.();
       }
-    }, 900);
+    }, mode === "guided" ? 900 : 2200);
 
     return () => clearTimeout(timer);
-  }, [
-    currentStep,
-    phase,
-    steps,
-    retryCount,
-    hasError,
-    mode,
-    onComplete,
-  ]);
+  }, [currentStep, phase, retryCount, steps, mode, onComplete, onFail]);
 
-  /* ===================== FAILURE PROPAGATION ===================== */
+  /* ===== Auto-collapse on finish ===== */
   useEffect(() => {
-    if (hasError) {
-      setPhase("failed");
-      if (mode === "autonomous") onFail?.();
+    if (phase === "complete" || phase === "failed") {
+      setCollapsed(true);
     }
-  }, [hasError, mode, onFail]);
+  }, [phase]);
 
-  /* ===================== MANUAL RETRY ===================== */
-  const handleManualRetry = () => {
-    setRetryKey((k) => k + 1);
-    setPhase("executing");
-  };
+  const completedCount = stepStatuses.filter((s) => s === "completed").length;
+  const totalSteps = allLogs.length;
+  const duration = ((Date.now() - startTime) / 1000).toFixed(1);
 
-  /* ===================== PROGRESS ===================== */
-  const completedCount = stepStatuses.filter(
-    (s) => s === "completed"
-  ).length;
+  /* ================= UI ================= */
 
-  const progress =
-    steps.length === 0
-      ? 0
-      : Math.round((completedCount / steps.length) * 100);
-
-  /* ===================== UI ===================== */
   return (
-    <div className="rounded-2xl bg-white/95 backdrop-blur border border-slate-200 shadow-[0_20px_60px_rgba(1,157,145,0.12)] px-5 py-4">
-      {/* Header */}
-      <div className="flex items-start gap-3 mb-5">
-        {phase === "failed" ? (
-          <div className="w-7 h-7 rounded-full bg-red-500 flex items-center justify-center">
-            <XCircle className="w-4 h-4 text-white" />
-          </div>
-        ) : phase === "complete" ? (
-          <div className="w-7 h-7 rounded-full bg-[#019D91] flex items-center justify-center">
-            <Check className="w-4 h-4 text-white" />
-          </div>
-        ) : (
-          <Loader2 className="w-5 h-5 text-[#019D91] animate-spin" />
-        )}
-
-        <div className="flex-1">
-          <p className="text-sm font-semibold text-slate-900">
-            {phase === "failed"
-              ? "Test failed"
-              : phase === "complete"
-              ? "Execution complete"
-              : "Execution in progress"}
-          </p>
-          <p className="text-xs text-slate-500">{title}</p>
-        </div>
-
-        {retryCount > 0 && phase === "executing" && (
-          <span className="flex items-center gap-2 text-xs px-2 py-0.5 rounded-full bg-yellow-50 text-yellow-700 border border-yellow-200">
-            <RotateCcw className="w-3.5 h-3.5" />
-            Retry {retryCount}/{MAX_RETRIES[mode]}
-          </span>
-        )}
-
-        {phase === "complete" && (
-          <span className="flex items-center gap-2 text-xs text-[#019D91]">
-            <Brain className="w-3.5 h-3.5" />
-            Confident
-          </span>
-        )}
-      </div>
-
-      {/* Progress */}
-      <div className="mb-4 h-1 w-full bg-[#E6F4F2] rounded-full overflow-hidden">
-        <div
+    <div className="rounded-2xl border border-slate-200/70 bg-white/80 backdrop-blur-xl shadow-[0_10px_30px_rgba(0,0,0,0.06)] overflow-hidden transition-all">
+      {/* ===== HEADER ===== */}
+      {(phase === "complete" || phase === "failed") && (
+        <button
+          onClick={() => setCollapsed((c) => !c)}
           className={cn(
-            "h-1 transition-all",
-            phase === "failed"
-              ? "bg-red-500"
-              : "bg-[#019D91]"
+            "w-full px-4 py-3 flex items-center justify-between border-b transition",
+            phase === "complete"
+              ? "bg-emerald-50/70 hover:bg-emerald-50"
+              : "bg-red-50/70 hover:bg-red-50"
           )}
-          style={{ width: `${progress}%` }}
-        />
-      </div>
+        >
+          <div className="flex items-center gap-2">
+            {phase === "complete" ? (
+              <Check className="w-4 h-4 text-emerald-600" />
+            ) : (
+              <XCircle className="w-4 h-4 text-red-500" />
+            )}
 
-      {/* Steps */}
-      <div className="space-y-2">
-        {steps.map((s, i) => (
-          <ExecutionStep
-            key={i}
-            step={s.step}
-            description={s.description}
-            status={stepStatuses[i]}
-            index={i}
-            icon={s.icon}
-          />
-        ))}
-      </div>
-
-      {/* Failure + Retry */}
-      {phase === "failed" && (
-        <div className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
-          <p className="text-sm font-semibold text-red-700">
-            Execution stopped after retries
-          </p>
-          <p className="text-xs text-red-600 mt-1">
-            The step failed after automated retry attempts.
-          </p>
-
-          <div className="mt-3 flex gap-2">
-            <button
-              onClick={handleManualRetry}
-              className="inline-flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-50"
+            <span
+              className={cn(
+                "text-sm font-semibold",
+                phase === "complete" ? "text-emerald-700" : "text-red-600"
+              )}
             >
-              <RotateCcw className="w-3.5 h-3.5" />
-              Retry phase
-            </button>
+              {phase === "complete"
+                ? "Execution completed"
+                : "Execution failed"}
+            </span>
           </div>
+
+          <div className="flex items-center gap-4 text-xs text-slate-500">
+            <span>{duration}s</span>
+            <span>{totalSteps} steps</span>
+            <ChevronDown
+              className={cn(
+                "w-4 h-4 transition-transform",
+                !collapsed && "rotate-180"
+              )}
+            />
+          </div>
+        </button>
+      )}
+
+      {/* ===== BODY ===== */}
+      {!collapsed && (
+        <div className="p-5 space-y-6">
+          {/* Execution Plan */}
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <Target className="w-4 h-4 text-[#019D91]" />
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-700">
+                Execution Plan
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              {PLAN_STEPS.map((label, i) => (
+                <ExecutionStep
+                  key={i}
+                  step={label}
+                  description=""
+                  status={
+                    stepStatuses[i] === "error"
+                      ? "error"
+                      : i < completedCount
+                      ? "completed"
+                      : i === currentStep && phase === "executing"
+                      ? "executing"
+                      : "pending"
+                  }
+                  index={i}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Execution Details */}
+          {mode === "autonomous" && (
+            <div className="pt-5 border-t border-slate-200">
+              <div className="flex items-center gap-2 mb-4">
+                <Zap className="w-4 h-4 text-orange-500" />
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-700">
+                  Execution Details
+                </span>
+              </div>
+
+              <div className="space-y-3">
+                {allLogs.map((log, i) => (
+                  <ExecutionLogRow
+                    key={i}
+                    stepNumber={log.step}
+                    goal={log.goal}
+                    action={log.action}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Failure + Manual Retry */}
+          {phase === "failed" && (
+            <div className="pt-5 border-t border-slate-200 flex items-center justify-between">
+              <p className="text-sm text-red-600 font-medium">
+                Execution failed during validation.
+              </p>
+
+              <button
+                onClick={resetExecution}
+                className="inline-flex items-center gap-2 text-xs px-3 py-1.5 rounded-md border border-red-200 bg-white hover:bg-red-50 text-red-600 transition"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                Retry manually
+              </button>
+            </div>
+          )}
+
+          {/* Completion */}
+          {phase === "complete" && (
+            <div className="pt-5 border-t border-slate-200">
+              <p className="text-sm text-emerald-600 font-semibold">
+                Task completed successfully in {duration}s.
+              </p>
+              <p className="text-xs text-slate-500 mt-1">
+                {totalSteps} execution steps recorded.
+              </p>
+            </div>
+          )}
         </div>
       )}
     </div>

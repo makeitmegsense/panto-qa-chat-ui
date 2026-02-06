@@ -15,12 +15,30 @@ const QAChatbot = () => {
   ]);
 
   const [isTyping, setIsTyping] = useState(false);
+
+  /* ===== Scroll handling ===== */
+  const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const [autoScroll, setAutoScroll] = useState(true);
 
+  /** Detect if user scrolled away from bottom */
+  const handleScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const isNearBottom =
+      el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+
+    setAutoScroll(isNearBottom);
+  };
+
+  /** Auto-scroll only when user is near bottom */
   useEffect(() => {
+    if (!autoScroll) return;
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isTyping]);
+  }, [messages, isTyping, autoScroll]);
 
+  /* ===== Send handler (UNCHANGED LOGIC) ===== */
   const handleSend = (
     content: string,
     mode: "guided" | "autonomous"
@@ -37,100 +55,52 @@ const QAChatbot = () => {
     setTimeout(() => {
       setIsTyping(false);
 
-      /* ===================== INTENT DETECTION ===================== */
-      const isFailureScenario = content
-        .toLowerCase()
-        .includes("orange");
+      const isFailureScenario = content.toLowerCase().includes("orange");
 
-      /* ===================== STEP DEFINITIONS ===================== */
       const successSteps = [
-        {
-          step: "Locate product",
-          description: "Finding the product on the page",
-          icon: "search",
-        },
-        {
-          step: "Find CTA",
-          description: "Locating the Add to Cart button",
-          icon: "view",
-        },
-        {
-          step: "Click button",
-          description: "Adding item to cart",
-          icon: "click",
-        },
-        {
-          step: "Verify cart",
-          description: "Ensuring item appears in cart",
-          icon: "action",
-        },
+        { step: "Locate product", description: "Finding the product on the page", icon: "search" },
+        { step: "Find CTA", description: "Locating the Add to Cart button", icon: "view" },
+        { step: "Click button", description: "Adding item to cart", icon: "click" },
+        { step: "Verify cart", description: "Ensuring item appears in cart", icon: "action" },
       ];
 
       const failureSteps = [
         {
           step: "Locate product",
-          description:
-            "Product ‘Orange’ found on category page",
+          description: "Product ‘Orange’ found on category page",
           icon: "search",
         },
         {
           step: "Find CTA",
-          description:
-            "Add to Cart button is disabled",
+          description: "Add to Cart button is disabled",
           icon: "view",
-          shouldFail: true, // 🔴 critical
+          shouldFail: true,
         },
       ];
 
-      const steps = isFailureScenario
-        ? failureSteps
-        : successSteps;
+      const steps = isFailureScenario ? failureSteps : successSteps;
 
-      /* ===================== EXECUTION PAYLOAD ===================== */
       const execution =
         mode === "autonomous"
           ? {
               mode: "autonomous" as const,
               workflows: isFailureScenario
                 ? [
-                    {
-                      id: "prep",
-                      title: "Preparation",
-                      steps: steps.slice(0, 1),
-                    },
-                    {
-                      id: "action",
-                      title: "Action",
-                      steps: steps.slice(1), // fails here
-                    },
+                    { id: "prep", title: "Preparation", steps: steps.slice(0, 1) },
+                    { id: "action", title: "Action", steps: steps.slice(1) },
                   ]
                 : [
-                    {
-                      id: "prep",
-                      title: "Preparation",
-                      steps: steps.slice(0, 2),
-                    },
-                    {
-                      id: "action",
-                      title: "Action",
-                      steps: steps.slice(2, 3),
-                    },
-                    {
-                      id: "validation",
-                      title: "Validation",
-                      steps: steps.slice(3),
-                    },
+                    { id: "prep", title: "Preparation", steps: steps.slice(0, 2) },
+                    { id: "action", title: "Action", steps: steps.slice(2, 3) },
+                    { id: "validation", title: "Validation", steps: steps.slice(3) },
                   ],
             }
           : {
               mode: "guided" as const,
-              title: isFailureScenario
-                ? "Add orange to cart"
-                : "Add item to cart",
+              title: isFailureScenario ? "Add orange to cart" : "Add item to cart",
               steps,
             };
 
-      /* ===================== ASSISTANT MESSAGE ===================== */
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
@@ -149,11 +119,12 @@ const QAChatbot = () => {
   };
 
   return (
-    <div className="relative min-h-screen flex justify-center px-4 bg-gradient-to-b from-[#EAF7F5] via-[#E6F4F2] to-[#DFF1EE]">
+    <div className="h-screen w-full bg-gradient-to-b from-[#EAF7F5] via-[#E6F4F2] to-[#DFF1EE] flex justify-center">
       {/* Ambient glow */}
       <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top,_rgba(1,157,145,0.15),_transparent_60%)]" />
 
       <div className="w-full max-w-3xl my-10 bg-white/95 backdrop-blur rounded-3xl shadow-[0_20px_60px_rgba(1,157,145,0.15)] flex flex-col overflow-hidden">
+        
         {/* Header */}
         <header className="px-6 py-4 border-b border-slate-200 bg-white sticky top-0 z-10">
           <div className="flex items-center gap-3">
@@ -171,8 +142,12 @@ const QAChatbot = () => {
           </div>
         </header>
 
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-6 py-10 space-y-10 bg-gradient-to-b from-transparent via-[#F3FBFA] to-transparent">
+        {/* ===== Scrollable Messages Area ===== */}
+        <div
+          ref={scrollRef}
+          onScroll={handleScroll}
+          className="flex-1 overflow-y-auto px-6 py-10 space-y-10 bg-gradient-to-b from-transparent via-[#F3FBFA] to-transparent"
+        >
           {messages.map((msg) => (
             <ChatMessage key={msg.id} message={msg} />
           ))}
@@ -189,6 +164,7 @@ const QAChatbot = () => {
             </div>
           )}
 
+          {/* anchor for smooth scroll */}
           <div ref={bottomRef} />
         </div>
 

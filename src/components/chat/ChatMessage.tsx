@@ -48,7 +48,7 @@ const ChatMessage = ({ message }: ChatMessageProps) => {
           "w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 mt-1",
           isUser
             ? "bg-[#019D91] text-white"
-            : "bg-[#019D91] text-[#019D91]/60"
+            : "bg-[#019D91]/10 text-[#019D91]"
         )}
       >
         {isUser ? (
@@ -60,68 +60,65 @@ const ChatMessage = ({ message }: ChatMessageProps) => {
 
       {/* Message column */}
       <div
-  className={cn(
-    "space-y-3 transition-all duration-500 ease-out",
-    isUser
-      ? "max-w-[75%]"
-      : execution
-      ? "w-full"
-      : "max-w-[75%]"
-  )}
->
-        {/* Text bubble */}
+        className={cn(
+          "space-y-4 transition-all duration-500 ease-out",
+          isUser
+            ? "max-w-[75%]"
+            : execution
+            ? "w-full"
+            : "max-w-[75%]"
+        )}
+      >
+        {/* ================= TEXT BUBBLE ================= */}
         <div
           className={cn(
             "px-4 py-2.5 text-sm rounded-2xl leading-relaxed",
             isUser
-              ? "bg-[#019D91]/60 text-white rounded-tr-sm"
+              ? "bg-[#019D91] text-white rounded-tr-sm"
               : "bg-white text-slate-900 border border-slate-200 rounded-tl-sm shadow-sm"
           )}
         >
           {message.content}
         </div>
 
-        {/* Execution workspace (assistant only, visually detached) */}
+        {/* ================= EXECUTION WORKSPACE ================= */}
         {execution && !isUser && (
           <div className="pl-2 pr-1">
-            <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4">
-              {execution.mode === "autonomous" && execution.workflows ? (
-                <>
-                  {/* Execution header */}
-                  <div className="mb-4">
-                    <p className="text-sm font-semibold text-slate-900">
-                      Autonomous execution plan
-                    </p>
-                    <p className="text-xs text-slate-500">
-                      I’ll execute each phase sequentially and report progress
-                    </p>
-                  </div>
-
-                  <AutonomousWorkflow
-                    workflows={execution.workflows}
-                  />
-                </>
-              ) : (
-                execution.steps &&
-                execution.title && (
+            {/* ===== Glass wrapper (Panto homepage style) ===== */}
+            <div className="w-full rounded-2xl border border-slate-200/60 bg-white/70 backdrop-blur-xl shadow-[0_20px_60px_rgba(2,132,199,0.08)] p-6 transition-all">
+              
+              {/* ===== Header ===== */}
+              <div className="mb-5">
+                {execution.mode === "autonomous" ? (
                   <>
-                    <div className="mb-3">
-                      <p className="text-sm font-semibold text-slate-900">
-                        {execution.title}
-                      </p>
-                      <p className="text-xs text-slate-500">
-                        I’ll guide you through each step
-                      </p>
-                    </div>
+                    <h2 className="text-base font-semibold text-slate-900">
+                      Autonomous execution plan
+                    </h2>
+                  </>
+                ) : (
+                  <>
+                    <h2 className="text-base font-semibold text-slate-900">
+                      {execution.title}
+                    </h2>
+                  </>
+                )}
+              </div>
 
+              {/* ===== Mint execution surface ===== */}
+              <div className="rounded-xl border border-[#019D91]/10 p-4">
+                {execution.mode === "autonomous" && execution.workflows ? (
+                  <AutonomousWorkflow workflows={execution.workflows} />
+                ) : (
+                  execution.steps &&
+                  execution.title && (
                     <ExecutionBlock
                       title={execution.title}
                       steps={execution.steps}
                       mode="guided"
                     />
-                  </>
-                )
-              )}
+                  )
+                )}
+              </div>
             </div>
           </div>
         )}
