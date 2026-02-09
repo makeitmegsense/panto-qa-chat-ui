@@ -217,7 +217,7 @@ const QAChatbot = () => {
       </div>
 
       {/* ===== Input ===== */}
-      <div className="border-t border-slate-200 bg-white px-4 py-3">
+      <div className="bg-white px-4 py-3">
         <ChatInput
           onSend={handleSend}
           disabled={isThinking}

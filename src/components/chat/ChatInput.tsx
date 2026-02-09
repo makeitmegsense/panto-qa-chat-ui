@@ -1,5 +1,7 @@
+"use client";
+
 import { useState } from "react";
-import { Send, Sparkles, Zap } from "lucide-react";
+import { Send, Sparkles, Zap, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ChatInputProps {
@@ -10,86 +12,123 @@ interface ChatInputProps {
 const ChatInput = ({ onSend, disabled }: ChatInputProps) => {
   const [input, setInput] = useState("");
   const [mode, setMode] = useState<"guided" | "autonomous">("guided");
+  const [open, setOpen] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (input.trim() && !disabled) {
       onSend(input.trim(), mode);
       setInput("");
+      setOpen(false);
     }
   };
 
   return (
-    <div className="border-t border-border bg-card/80 backdrop-blur-sm p-4">
-      {/* Mode selector */}
-      <div className="flex gap-2 mb-3">
-        <button
-          onClick={() => setMode("guided")}
-          className={cn(
-            "flex items-center gap-2 px-3 py-1.5 rounded-sm text-sm font-medium transition-all",
-            mode === "guided"
-              ? "bg-primary/20 text-primary border border-primary/30"
-              : "bg-muted/50 text-muted-foreground hover:bg-muted"
-          )}
-        >
-          <Sparkles className="w-4 h-4" />
-          Guided
-        </button>
-        <button
-          onClick={() => setMode("autonomous")}
-          className={cn(
-            "flex items-center gap-2 px-3 py-1.5 rounded-sm text-sm font-medium transition-all",
-            mode === "autonomous"
-              ? "bg-accent/20 text-accent border border-accent/30"
-              : "bg-muted/50 text-muted-foreground hover:bg-muted"
-          )}
-        >
-          <Zap className="w-4 h-4" />
-          Autonomous
-        </button>
-      </div>
-
-      {/* Input form */}
-      <form onSubmit={handleSubmit} className="relative">
+    <div className="border-t border-slate-200 bg-white px-3 py-2 overflow-visible">
+      <form
+        onSubmit={handleSubmit}
+        className="relative flex items-center gap-2 max-w-4xl mx-auto overflow-visible"
+      >
+        {/* Input */}
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
+          disabled={disabled}
           placeholder={
             mode === "autonomous"
-              ? "Describe the test scenario to execute..."
+              ? "Describe scenario…"
               : "What would you like me to test?"
           }
-          disabled={disabled}
           className={cn(
-            "w-full px-4 py-3 pr-12 rounded-sm",
-            "bg-muted/50 border border-border",
-            "text-foreground placeholder:text-muted-foreground",
-            "focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50",
-            "transition-all duration-200",
+            "flex-1 h-10 rounded-md px-3 text-sm",
+            "bg-white border border-slate-200",
+            "placeholder:text-slate-400 text-slate-800",
+            "focus:outline-none focus:ring-2 focus:ring-emerald-400/30 focus:border-emerald-400/40",
+            "transition",
             disabled && "opacity-50 cursor-not-allowed"
           )}
         />
+
+        {/* Mode dropdown */}
+        <div className="relative shrink-0 overflow-visible">
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            className="
+              h-10 rounded-md border border-slate-200 bg-white px-2.5
+              text-xs font-medium text-slate-700
+              flex items-center gap-1.5
+              hover:bg-slate-50
+            "
+          >
+            {mode === "guided" ? (
+              <Sparkles className="w-3.5 h-3.5" />
+            ) : (
+              <Zap className="w-3.5 h-3.5" />
+            )}
+            {mode === "guided" ? "Guided" : "Autonomous"}
+            <ChevronUp className="w-3.5 h-3.5" />
+          </button>
+
+          {open && (
+            <div
+              className="
+                absolute right-0 bottom-full mb-2
+                z-50 w-40
+                rounded-md border border-slate-200
+                bg-white shadow-md
+              "
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  setMode("guided");
+                  setOpen(false);
+                }}
+                className={cn(
+                  "w-full px-3 py-2 flex items-center gap-2 text-xs text-left",
+                  "hover:bg-slate-50",
+                  mode === "guided" && "font-medium text-emerald-600"
+                )}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                Guided
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setMode("autonomous");
+                  setOpen(false);
+                }}
+                className={cn(
+                  "w-full px-3 py-2 flex items-center gap-2 text-xs text-left",
+                  "hover:bg-slate-50",
+                  mode === "autonomous" && "font-medium text-emerald-600"
+                )}
+              >
+                <Zap className="w-3.5 h-3.5" />
+                Autonomous
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Send */}
         <button
           type="submit"
           disabled={!input.trim() || disabled}
           className={cn(
-            "absolute right-2 top-1/2 -translate-y-1/2",
-            "w-8 h-8 rounded-sm flex items-center justify-center",
-            "bg-primary text-primary-foreground",
-            "hover:bg-primary/90 transition-colors",
+            "h-10 w-10 rounded-full bg-emerald-600 text-white",
+            "flex items-center justify-center",
+            "hover:bg-emerald-700 transition",
             "disabled:opacity-50 disabled:cursor-not-allowed"
           )}
         >
           <Send className="w-4 h-4" />
         </button>
       </form>
-
-      <p className="text-xs text-muted-foreground mt-2 text-center">
-        {mode === "autonomous"
-          ? "AI will plan and execute all steps automatically"
-          : "AI will show each step as it executes"}
-      </p>
     </div>
   );
 };

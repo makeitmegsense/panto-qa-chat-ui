@@ -85,41 +85,69 @@ const ChatMessage = ({ message }: ChatMessageProps) => {
         {execution && !isUser && (
           <div className="pl-2 pr-1">
             {/* ===== Glass wrapper (Panto homepage style) ===== */}
-            <div className="w-full rounded-sm border border-slate-200/60 bg-white/70 backdrop-blur-xl shadow-[0_20px_60px_rgba(2,132,199,0.08)] p-6 transition-all">
-              
-              {/* ===== Header ===== */}
-              <div className="mb-5">
-                {execution.mode === "autonomous" ? (
-                  <>
-                    <h2 className="text-base font-semibold text-slate-900">
-                      Autonomous execution plan
-                    </h2>
-                  </>
-                ) : (
-                  <>
-                    <h2 className="text-base font-semibold text-slate-900">
-                      {execution.title}
-                    </h2>
-                  </>
-                )}
-              </div>
+   <div className="w-full rounded-sm border border-slate-200/60 bg-white/70 backdrop-blur-xl shadow-[0_20px_60px_rgba(2,132,199,0.08)] p-6 transition-all">
 
-              {/* ===== Mint execution surface ===== */}
-              <div className="rounded-sm border border-[#019D91]/10 p-4">
-                {execution.mode === "autonomous" && execution.workflows ? (
-                  <AutonomousWorkflow workflows={execution.workflows} />
-                ) : (
-                  execution.steps &&
-                  execution.title && (
-                    <ExecutionBlock
-                      title={execution.title}
-                      steps={execution.steps}
-                      mode="guided"
-                    />
-                  )
-                )}
-              </div>
-            </div>
+  {/* ===== Header ===== */}
+  <div className="mb-5 flex items-start justify-between gap-4">
+
+    {/* Title */}
+    <div>
+      <h2 className="text-base font-semibold text-slate-900 leading-tight">
+        {execution.mode === "autonomous"
+          ? "Autonomous execution plan"
+          : execution.title}
+      </h2>
+
+      <p className="text-xs text-slate-500 mt-1">
+        {execution.mode === "autonomous"
+          ? "AI will execute each phase and validate results automatically"
+          : "Step-by-step guided validation of the scenario"}
+      </p>
+    </div>
+
+    {/* Mode label */}
+    <div
+      className={`
+        shrink-0 inline-flex items-center gap-2
+        px-3 py-1 rounded-full text-xs font-medium border
+        ${
+          execution.mode === "autonomous"
+            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+            : "bg-blue-50 text-blue-700 border-blue-200"
+        }
+      `}
+    >
+      <span
+        className={`
+          w-1.5 h-1.5 rounded-full
+          ${
+            execution.mode === "autonomous"
+              ? "bg-emerald-500"
+              : "bg-blue-500"
+          }
+        `}
+      />
+      {execution.mode === "autonomous" ? "Autonomous" : "Guided"}
+    </div>
+  </div>
+
+  {/* ===== Mint execution surface ===== */}
+  <div className="rounded-sm border border-[#019D91]/10 bg-white/60 backdrop-blur p-4">
+    {execution.mode === "autonomous" && execution.workflows ? (
+      <AutonomousWorkflow workflows={execution.workflows} />
+    ) : (
+      execution.steps &&
+      execution.title && (
+        <ExecutionBlock
+          title={execution.title}
+          steps={execution.steps}
+          mode="guided"
+        />
+      )
+    )}
+  </div>
+</div>
+
           </div>
         )}
       </div>

@@ -55,7 +55,7 @@ const STEP_ICONS = [
   BadgeCheck,
 ];
 
-/* ================= MOCK LOG GENERATION ================= */
+/* ================= MOCK LOGS ================= */
 
 function generateLogsForStep(stepIndex: number): LogEntry[] {
   switch (stepIndex) {
@@ -73,6 +73,7 @@ function generateLogsForStep(stepIndex: number): LogEntry[] {
           action: "Waiting 5 seconds, then capturing screenshot and XML.",
         },
       ];
+
     case 1:
       return [
         {
@@ -81,15 +82,16 @@ function generateLogsForStep(stepIndex: number): LogEntry[] {
           action: "Detected search bar using accessibility tree.",
         },
       ];
+
     case 2:
       return [
         {
           step: 4,
           goal: "Tap Add to Cart.",
-          action:
-            "Element found but disabled — tap interaction aborted.",
+          action: "Element found but disabled — tap interaction aborted.",
         },
       ];
+
     case 3:
       return [
         {
@@ -98,12 +100,13 @@ function generateLogsForStep(stepIndex: number): LogEntry[] {
           action: "Validation failed — cart count unchanged.",
         },
       ];
+
     default:
       return [];
   }
 }
 
-/* ================= UI COMPONENTS ================= */
+/* ================= SMALL UI ================= */
 
 const ExecutionStep = ({
   step,
@@ -113,45 +116,37 @@ const ExecutionStep = ({
   step: string;
   icon: React.ReactNode;
   status: StepStatus;
-}) => {
-  return (
-    <div
-      className={cn(
-        "relative flex items-start gap-3 rounded-md px-3 py-2 text-sm border",
-        status === "completed" &&
-          "bg-green-50 border-green-200 text-green-700",
-        status === "executing" &&
-          "bg-blue-50 border-blue-200 text-blue-700",
-        status === "error" &&
-          "bg-red-50 border-red-200 text-red-700",
-        status === "pending" &&
-          "bg-slate-50 border-slate-200 text-slate-600"
-      )}
-    >
-      <div className="mt-0.5 shrink-0">{icon}</div>
-      <div className="font-medium leading-snug">{step}</div>
-    </div>
-  );
-};
+}) => (
+  <div
+    className={cn(
+      "relative flex items-start gap-3 rounded-md px-3 py-2 text-sm border transition-colors",
+      status === "completed" &&
+        "bg-green-50 border-green-200 text-green-700",
+      status === "executing" &&
+        "bg-blue-50 border-blue-200 text-blue-700",
+      status === "error" &&
+        "bg-red-50 border-red-200 text-red-700",
+      status === "pending" &&
+        "bg-slate-50 border-slate-200 text-slate-600"
+    )}
+  >
+    <div className="mt-0.5 shrink-0">{icon}</div>
+    <div className="font-medium leading-snug">{step}</div>
+  </div>
+);
 
 const ExecutionLogRow = ({
   stepNumber,
   goal,
   action,
-}: {
-  stepNumber: number;
-  goal: string;
-  action: string;
-}) => {
-  return (
-    <div className="rounded-md border border-slate-200 bg-white px-3 py-2 text-xs">
-      <div className="font-medium text-slate-700">
-        Step {stepNumber}: {goal}
-      </div>
-      <div className="mt-0.5 text-slate-500">{action}</div>
+}: LogEntry) => (
+  <div className="rounded-md border border-slate-200 bg-white px-3 py-2 text-xs">
+    <div className="font-medium text-slate-700">
+      Step {stepNumber}: {goal}
     </div>
-  );
-};
+    <div className="mt-0.5 text-slate-500">{action}</div>
+  </div>
+);
 
 /* ================= EXECUTION BLOCK ================= */
 
@@ -164,20 +159,27 @@ const ExecutionBlock = ({
 }: ExecutionBlockProps) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [stepStatuses, setStepStatuses] = useState<StepStatus[]>([]);
-  const [phase, setPhase] = useState<
-    "executing" | "complete" | "failed"
-  >("executing");
+  const [phase, setPhase] = useState<"executing" | "complete" | "failed">(
+    "executing"
+  );
   const [allLogs, setAllLogs] = useState<LogEntry[]>([]);
   const [retryCount, setRetryCount] = useState(0);
   const [collapsed, setCollapsed] = useState(false);
   const [startTime, setStartTime] = useState(Date.now());
 
+  /** 🔒 prevents infinite loop */
+  const stoppedRef = useRef(false);
+
+  /** 🔒 prevents unwanted re-init */
   const initializedRef = useRef(false);
+
   const MAX_AUTO_RETRY = mode === "autonomous" ? 3 : 1;
 
   /* ===== INIT ===== */
   useEffect(() => {
     if (initializedRef.current) return;
+
+    stoppedRef.current = false;
 
     setStepStatuses(steps.map(() => "pending"));
     setAllLogs([]);
@@ -194,6 +196,7 @@ const ExecutionBlock = ({
   useEffect(() => {
     if (phase !== "executing") return;
     if (currentStep >= PLAN_STEPS.length) return;
+    if (stoppedRef.current) return;
 
     setStepStatuses((s) => {
       const next = [...s];
@@ -202,21 +205,29 @@ const ExecutionBlock = ({
     });
 
     const timer = setTimeout(() => {
+      if (stoppedRef.current) return;
+
       const shouldFail = steps[currentStep]?.shouldFail;
 
+      /* ❌ FAILURE */
       if (shouldFail) {
         if (retryCount < MAX_AUTO_RETRY) {
-          setRetryCount((r) => r + 1);
+          const nextRetry = retryCount + 1;
+          setRetryCount(nextRetry);
+
           setAllLogs((l) => [
             ...l,
             {
               step: l.length + 1,
               goal: `Retrying step ${currentStep + 1}`,
-              action: `Auto retry attempt ${retryCount + 1}`,
+              action: `Auto retry attempt ${nextRetry}`,
             },
           ]);
+
           return;
         }
+
+        stoppedRef.current = true;
 
         setStepStatuses((s) => {
           const next = [...s];
@@ -229,25 +240,30 @@ const ExecutionBlock = ({
         return;
       }
 
+      /* ✅ SUCCESS */
       setStepStatuses((s) => {
         const next = [...s];
         next[currentStep] = "completed";
         return next;
       });
 
-      setAllLogs((l) => [...l, ...generateLogsForStep(currentStep)]);
+      if (mode === "autonomous") {
+        setAllLogs((l) => [...l, ...generateLogsForStep(currentStep)]);
+      }
 
       if (currentStep < PLAN_STEPS.length - 1) {
         setCurrentStep((i) => i + 1);
       } else {
+        stoppedRef.current = true;
         setPhase("complete");
         onComplete?.();
       }
     }, mode === "guided" ? 900 : 2000);
 
     return () => clearTimeout(timer);
-  }, [currentStep, phase, retryCount]);
+  }, [currentStep, phase, retryCount, mode, steps, onComplete, onFail]);
 
+  /* ===== AUTO COLLAPSE ===== */
   useEffect(() => {
     if (phase !== "executing") setCollapsed(true);
   }, [phase]);
@@ -261,7 +277,7 @@ const ExecutionBlock = ({
       {(phase === "complete" || phase === "failed") && (
         <button
           onClick={() => setCollapsed((c) => !c)}
-          className="w-full px-4 py-3 flex items-center justify-between border-b hover:bg-emerald-50/40"
+          className="w-full px-4 py-3 flex items-center justify-between border-b hover:bg-emerald-50/40 transition"
         >
           <div className="flex items-center gap-2">
             {phase === "complete" ? (
@@ -322,7 +338,7 @@ const ExecutionBlock = ({
             </div>
           </div>
 
-          {/* DETAILS */}
+          {/* DETAILS → autonomous only */}
           {mode === "autonomous" && (
             <div className="pt-4 border-t">
               <div className="flex items-center gap-2 mb-3">
@@ -358,27 +374,4 @@ const ExecutionBlock = ({
   );
 };
 
-/* ================= PAGE ================= */
-
-export default function ExecutionPage() {
-  return (
-    <div className="min-h-screen bg-slate-100 p-8">
-      <div className="max-w-2xl mx-auto space-y-6">
-        <h1 className="text-lg font-semibold text-slate-800">
-          Autonomous Execution
-        </h1>
-
-        <ExecutionBlock
-          title="Checkout flow"
-          mode="autonomous"
-          steps={[
-            { step: "", description: "" },
-            { step: "", description: "" },
-            { step: "", description: "", shouldFail: true },
-            { step: "", description: "" },
-          ]}
-        />
-      </div>
-    </div>
-  );
-}
+export default ExecutionBlock;
