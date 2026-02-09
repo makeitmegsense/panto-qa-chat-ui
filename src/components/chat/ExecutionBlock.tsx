@@ -48,12 +48,7 @@ const PLAN_STEPS = [
   "Validating action",
 ];
 
-const STEP_ICONS = [
-  Camera,
-  Search,
-  MousePointerClick,
-  BadgeCheck,
-];
+const STEP_ICONS = [Camera, Search, MousePointerClick, BadgeCheck];
 
 /* ================= MOCK LOGS ================= */
 
@@ -61,50 +56,22 @@ function generateLogsForStep(stepIndex: number): LogEntry[] {
   switch (stepIndex) {
     case 0:
       return [
-        {
-          step: 1,
-          goal: "Open the Walmart application.",
-          action: "Launching application using package name com.application.walmart.",
-        },
-        {
-          step: 2,
-          goal: "Capture UI snapshot.",
-          action: "Waiting 5 seconds, then capturing screenshot and XML.",
-        },
+        { step: 1, goal: "Open the Walmart application.", action: "Launching application using package name com.application.walmart." },
+        { step: 2, goal: "Capture UI snapshot.", action: "Waiting 5 seconds, then capturing screenshot and XML." },
       ];
-
     case 1:
       return [
-        {
-          step: 3,
-          goal: "Locate search input.",
-          action: "Detected search bar using accessibility tree.",
-        },
-        {
-          step: 4,
-          goal: "Focus search field.",
-          action: "Input cursor placed successfully.",
-        },
+        { step: 3, goal: "Locate search input.", action: "Detected search bar using accessibility tree." },
+        { step: 4, goal: "Focus search field.", action: "Input cursor placed successfully." },
       ];
-
     case 2:
       return [
-        {
-          step: 5,
-          goal: "Tap Add to Cart.",
-          action: "Element found but disabled — tap interaction aborted.",
-        },
+        { step: 5, goal: "Tap Add to Cart.", action: "Element found but disabled — tap interaction aborted." },
       ];
-
     case 3:
       return [
-        {
-          step: 6,
-          goal: "Verify cart state.",
-          action: "Validation failed — cart count unchanged.",
-        },
+        { step: 6, goal: "Verify cart state.", action: "Validation failed — cart count unchanged." },
       ];
-
     default:
       return [];
   }
@@ -126,7 +93,6 @@ const ExecutionStep = ({
   failureReason?: string;
 }) => (
   <div className="space-y-2">
-    {/* Step box */}
     <div
       className={cn(
         "flex items-start gap-3 rounded-md px-3 py-2 text-sm border transition-colors",
@@ -137,30 +103,24 @@ const ExecutionStep = ({
       )}
     >
       <div className="mt-0.5 shrink-0">{icon}</div>
-      <div className="font-medium leading-snug flex-1">{step}</div>
-
+      <div className="font-medium flex-1">{step}</div>
       {status === "error" && <AlertTriangle className="w-4 h-4 text-red-500" />}
     </div>
 
-    {/* Failure reason */}
     {failureReason && (
       <div className="ml-6 text-xs text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">
         {failureReason}
       </div>
     )}
 
-    {/* Logs */}
     {logs.length > 0 && (
       <div className="ml-6 space-y-1">
         {logs.map((log, i) => (
-          <div
-            key={i}
-            className="rounded-md border border-slate-200 bg-white px-3 py-2 text-xs"
-          >
+          <div key={i} className="rounded-md border border-slate-200 bg-white px-3 py-2 text-xs">
             <div className="font-medium text-slate-700">
-              Step {log.step}: {log.goal}
+              Step {log?.step ?? "—"}: {log?.goal ?? "Unknown step"}
             </div>
-            <div className="mt-0.5 text-slate-500">{log.action}</div>
+            <div className="mt-0.5 text-slate-500">{log?.action ?? ""}</div>
           </div>
         ))}
       </div>
@@ -170,13 +130,7 @@ const ExecutionStep = ({
 
 /* ================= EXECUTION BLOCK ================= */
 
-const ExecutionBlock = ({
-  title,
-  steps,
-  mode,
-  onComplete,
-  onFail,
-}: ExecutionBlockProps) => {
+const ExecutionBlock = ({ title, steps, mode, onComplete, onFail }: ExecutionBlockProps) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [stepStatuses, setStepStatuses] = useState<StepStatus[]>([]);
   const [logsPerStep, setLogsPerStep] = useState<LogEntry[][]>([]);
@@ -189,28 +143,28 @@ const ExecutionBlock = ({
 
   const stoppedRef = useRef(false);
   const initializedRef = useRef(false);
+  const streamTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const MAX_AUTO_RETRY = mode === "autonomous" ? 3 : 1;
 
-  /* ===== INIT ===== */
+  /* ===== RESET ===== */
   const resetExecution = () => {
     stoppedRef.current = false;
-
     setStepStatuses(PLAN_STEPS.map(() => "pending"));
     setLogsPerStep(PLAN_STEPS.map(() => []));
     setFailureReason(null);
-
     setCurrentStep(0);
-    setPhase("executing");
     setRetryCount(0);
+    setPhase("executing");
     setCollapsed(false);
     setStartTime(Date.now());
-
-    initializedRef.current = true;
   };
 
   useEffect(() => {
-    if (!initializedRef.current) resetExecution();
+    if (!initializedRef.current) {
+      resetExecution();
+      initializedRef.current = true;
+    }
   }, [steps, mode]);
 
   /* ===== EXECUTION LOOP ===== */
@@ -225,9 +179,32 @@ const ExecutionBlock = ({
       return next;
     });
 
-    const timer = setTimeout(() => {
-      if (stoppedRef.current) return;
+    const logs = mode === "autonomous" ? generateLogsForStep(currentStep) : [];
+    let index = 0;
 
+    const streamLogs = () => {
+      if (stoppedRef.current) return; // ⭐ critical infinite-loop fix
+
+      if (index < logs.length) {
+        const entry = logs[index];
+
+        if (entry) {
+          setLogsPerStep((prev) => {
+            const next = [...prev];
+            next[currentStep] = [...next[currentStep], entry];
+            return next;
+          });
+        }
+
+        index++;
+        streamTimerRef.current = setTimeout(streamLogs, 700);
+        return;
+      }
+
+      finishStep();
+    };
+
+    const finishStep = () => {
       const shouldFail = steps[currentStep]?.shouldFail;
 
       /* ❌ FAILURE */
@@ -238,6 +215,8 @@ const ExecutionBlock = ({
         }
 
         stoppedRef.current = true;
+
+        if (streamTimerRef.current) clearTimeout(streamTimerRef.current);
 
         setStepStatuses((s) => {
           const next = [...s];
@@ -258,14 +237,6 @@ const ExecutionBlock = ({
         return next;
       });
 
-      if (mode === "autonomous") {
-        setLogsPerStep((prev) => {
-          const next = [...prev];
-          next[currentStep] = generateLogsForStep(currentStep);
-          return next;
-        });
-      }
-
       if (currentStep < PLAN_STEPS.length - 1) {
         setCurrentStep((i) => i + 1);
       } else {
@@ -273,9 +244,17 @@ const ExecutionBlock = ({
         setPhase("complete");
         onComplete?.();
       }
-    }, mode === "guided" ? 900 : 2000);
+    };
 
-    return () => clearTimeout(timer);
+    const timer = setTimeout(() => {
+      if (mode === "autonomous" && logs.length > 0) streamLogs();
+      else finishStep();
+    }, mode === "guided" ? 900 : 1200);
+
+    return () => {
+      clearTimeout(timer);
+      if (streamTimerRef.current) clearTimeout(streamTimerRef.current);
+    };
   }, [currentStep, phase, retryCount, mode, steps, onComplete, onFail]);
 
   /* ===== AUTO COLLAPSE ===== */
@@ -300,34 +279,24 @@ const ExecutionBlock = ({
             ) : (
               <XCircle className="w-4 h-4 text-red-500" />
             )}
-            <span
-              className={cn(
-                "text-sm font-medium",
-                phase === "complete" ? "text-green-600" : "text-red-600"
-              )}
-            >
+            <span className={cn("text-sm font-medium", phase === "complete" ? "text-green-600" : "text-red-600")}>
               {phase === "complete" ? "Execution completed" : "Execution failed"}
             </span>
           </div>
 
           <div className="flex items-center gap-4 text-xs text-slate-500">
             <span>{duration}s</span>
-            <ChevronDown
-              className={cn("w-4 h-4 transition-transform", !collapsed && "rotate-180")}
-            />
+            <ChevronDown className={cn("w-4 h-4 transition-transform", !collapsed && "rotate-180")} />
           </div>
         </button>
       )}
 
       {!collapsed && (
         <div className="p-4 space-y-6">
-          {/* PLAN + INLINE LOGS */}
           <div>
             <div className="flex items-center gap-2 mb-3">
               <Target className="w-4 h-4 text-emerald-600" />
-              <span className="text-xs font-semibold uppercase text-slate-700">
-                Execution Plan
-              </span>
+              <span className="text-xs font-semibold uppercase text-slate-700">Execution Plan</span>
             </div>
 
             <div className="space-y-3">
@@ -347,7 +316,6 @@ const ExecutionBlock = ({
             </div>
           </div>
 
-          {/* FAILURE RETRY */}
           {phase === "failed" && (
             <button
               onClick={resetExecution}
