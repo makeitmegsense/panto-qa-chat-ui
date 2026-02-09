@@ -132,7 +132,6 @@ const ChatMessage = ({ message }: ChatMessageProps) => {
   </div>
 
   {/* ===== Mint execution surface ===== */}
-  <div className="rounded-sm border border-[#019D91]/10 bg-white/60 backdrop-blur p-4">
     {execution.mode === "autonomous" && execution.workflows ? (
       <AutonomousWorkflow workflows={execution.workflows} />
     ) : (
@@ -145,7 +144,7 @@ const ChatMessage = ({ message }: ChatMessageProps) => {
         />
       )
     )}
-  </div>
+
 </div>
 
           </div>

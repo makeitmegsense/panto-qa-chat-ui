@@ -4,14 +4,14 @@ import { Smartphone } from "lucide-react";
 
 export default function ExecuteTestFlowPage() {
   return (
-    <div className="flex h-screen bg-[#F4F7F6]">
+    <div className="flex h-screen overflow-hidden bg-[#F4F7F6]">
       {/* ===== Sidebar ===== */}
-      <aside className="w-64 bg-white border-r border-slate-200 flex flex-col">
+      <aside className="w-64 bg-white border-r border-slate-200 flex flex-col shrink-0">
         <div className="px-6 py-6 text-2xl font-semibold text-[#019D91]">
           &lt;panto&gt;
         </div>
 
-        <nav className="flex-1 px-3 space-y-1">
+        <nav className="flex-1 px-3 space-y-1 overflow-y-auto">
           {[
             "Execute",
             "Test Runs",
@@ -35,14 +35,15 @@ export default function ExecuteTestFlowPage() {
           ))}
         </nav>
 
-        <div className="p-4 border-t text-sm text-slate-600">
+        <div className="p-4 border-t text-sm text-slate-600 shrink-0">
           Anand J. <span className="text-xs text-slate-400">Free Trial</span>
         </div>
       </aside>
 
       {/* ===== Main Content ===== */}
-      <main className="flex-1 p-6 overflow-visible">
-        <div className="mb-4">
+      <main className="flex-1 flex flex-col overflow-hidden p-6">
+        {/* Page header */}
+        <div className="mb-4 shrink-0">
           <h1 className="text-2xl font-semibold text-slate-900">
             Execute Test Flow
           </h1>
@@ -51,22 +52,22 @@ export default function ExecuteTestFlowPage() {
           </p>
         </div>
 
-        {/* Two-column workspace */}
-        <div className="grid grid-cols-2 gap-6 h-[calc(100%-72px)]">
-          {/* ===== Device View ===== */}
-          <div className="bg-white rounded-sm border border-slate-200 p-6 flex flex-col">
-            <div className="flex items-center gap-2 text-slate-800 font-medium mb-4">
+        {/* ===== Workspace (NO PAGE SCROLL) ===== */}
+        <div className="flex flex-1 gap-6 overflow-hidden">
+          {/* ===== Device View (smaller) ===== */}
+          <div className="w-[320px] bg-white rounded-sm border border-slate-200 p-4 flex flex-col shrink-0">
+            <div className="flex items-center gap-2 text-slate-800 font-medium mb-3">
               <Smartphone className="w-4 h-4" />
               Device View
             </div>
 
-            <div className="flex-1 border-2 border-dashed border-slate-200 rounded-sm flex items-center justify-center">
-              <div className="w-[240px] h-[480px] bg-black rounded-[28px]" />
+            <div className="flex-1 flex items-center justify-center">
+              <div className="w-[220px] h-[440px] bg-black rounded-[26px]" />
             </div>
           </div>
 
-          {/* ===== Chatbot Panel ===== */}
-          <div className="bg-white rounded-sm border border-slate-200 flex flex-col h-full overflow-visible">
+          {/* ===== Chat Panel (dominant) ===== */}
+          <div className="flex-1 bg-white rounded-sm border border-slate-200 flex flex-col overflow-hidden">
             {/* Header */}
             <div className="px-5 py-4 border-b flex items-center justify-between shrink-0">
               <p className="font-medium text-slate-900">
@@ -77,9 +78,9 @@ export default function ExecuteTestFlowPage() {
               </span>
             </div>
 
-            {/* Chatbot */}
-            {/* CRITICAL: message list scrolls, not the container */}
-            <div className="flex-1 min-h-0 overflow-visible">
+            {/* Chatbot container */}
+            {/* ONLY this area scrolls */}
+            <div className="flex-1 min-h-0 overflow-y-auto">
               <QAChatbot />
             </div>
           </div>
