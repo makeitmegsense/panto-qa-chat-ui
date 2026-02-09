@@ -200,18 +200,22 @@ const QAChatbot = () => {
         ))}
 
         {/* ===== SINGLE THINKING INDICATOR ===== */}
-        {isThinking && (
-          <div className="flex gap-3 items-end">
-            <div className="w-8 h-8 rounded-sm bg-[#F3FBFA] flex items-center justify-center">
-              <Bot className="w-4 h-4 text-[#019D91]" />
-            </div>
+{isThinking && (
+  <div className="flex items-center gap-3">
+    {/* Avatar */}
+    <div className="w-8 h-8 rounded-sm bg-[#F3FBFA] flex items-center justify-center">
+      <Bot className="w-4 h-4 text-[#019D91]" />
+    </div>
 
-            <PremiumThinkingIndicator
-              onComplete={handleThinkingComplete}
-              durationPerStage={1400} // slower, visible
-            />
-          </div>
-        )}
+    {/* Thinking Indicator */}
+    <div className="flex items-center">
+      <PremiumThinkingIndicator
+        onComplete={handleThinkingComplete}
+        durationPerStage={1400} // slower, visible
+      />
+    </div>
+  </div>
+)}
 
         <div ref={bottomRef} />
       </div>
